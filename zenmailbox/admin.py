@@ -1,4 +1,4 @@
-from django.contrib.admin import ModelAdmin, register
+from django.contrib.admin import ModelAdmin, register, TabularInline
 
 from .models import *
 
@@ -41,3 +41,12 @@ class FolderAdmin(ModelAdmin):
 @register(Attachment)
 class AttachmentAdmin(ModelAdmin):
     pass
+
+
+class MailInlineAdmin(TabularInline):
+    model = Mail
+
+
+@register(Thread)
+class ThreadAdmin(ModelAdmin):
+    inlines = [MailInlineAdmin]

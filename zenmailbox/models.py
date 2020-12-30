@@ -2,9 +2,8 @@ from django.db.models import *
 from django.utils.timezone import now
 
 
-class SafeDeleteQS(QuerySet):
-    def safe_delete(self):
-        self.update(deleted_at=now(), is_deleted=True)
+def safe_delete(qs):
+    qs.update(deleted_at=now(), is_deleted=True)
 
 
 class BaseModel(Model):
@@ -15,8 +14,6 @@ class BaseModel(Model):
     updated_at = DateTimeField(auto_now=True)
     deleted_at = DateTimeField(blank=True, null=True)
     is_deleted = BooleanField(default=False)
-
-    objects = SafeDeleteQS
 
     def safe_delete(self):
         if not self.is_deleted:
@@ -68,6 +65,7 @@ class Mailbox(BaseModel):
     is_active = BooleanField(default=True)
     imap_account = OneToOneField(IMAPAccount, on_delete=CASCADE, related_name="mailbox")
     smtp_account = OneToOneField(SMTPAccount, on_delete=SET_NULL, null=True, blank=True, related_name="mailbox")
+    initialized = BooleanField(default=False)
 
     def __str__(self):
         return str(self.imap_account)
@@ -89,6 +87,14 @@ class EMailEntity(Model):
     email = EmailField()
     name = CharField(max_length=255)
 
+    def __str__(self):
+        return "%s <%s>" % (self.email, self.name)
+
+
+class Thread(Model):
+    def __str__(self):
+        return str(self.id)
+
 
 class Mail(Model):
     message_id = CharField(max_length=255, unique=True)
@@ -101,9 +107,15 @@ class Mail(Model):
     html = TextField()
     received_at = DateTimeField()
     folder = ForeignKey(Folder, on_delete=SET_NULL, null=True, related_name="mails")
+    subject = CharField(max_length=255)
+    thread = ForeignKey(Thread, on_delete=SET_NULL, null=True, related_name="mails")
 
     def __str__(self):
-        return self.message_id
+        return self.subject
+
+    @property
+    def sent(self):
+        return self.folder.sent
 
 
 class Attachment(Model):
