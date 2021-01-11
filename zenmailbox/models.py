@@ -59,6 +59,8 @@ class IMAPAccount(MailAccount):
 
 class SMTPAccount(MailAccount):
     server = ForeignKey(SMTPServer, on_delete=CASCADE, related_name="accounts")
+    from_name = CharField(max_length=255, null=True, blank=True)
+    from_email = CharField(max_length=255, null=True, blank=True)
 
 
 class Mailbox(BaseModel):
