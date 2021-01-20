@@ -1,0 +1,4 @@
+include LICENSE
+include README.rst
+recursive-include zenmailbox/templates *
+include zenmailbox/migrations/*

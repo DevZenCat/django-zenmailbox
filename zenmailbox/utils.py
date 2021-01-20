@@ -5,8 +5,9 @@ from email.header import Header
 from random import choices
 
 from django.template.loader import get_template
+from django.utils.timezone import now
 
-from .models import Mail
+from .models import Mail, EMailEntity
 
 
 def format_email(email, name=None):
@@ -24,7 +25,8 @@ def format_email_list(email_list):
 ALPHA = 'abcdef0123456789'
 
 
-def reply(in_reply_to: Mail, text):
+def reply(instance: Mail, in_reply_to: Mail):
+    text = instance.plain_text
     account = in_reply_to.folder.mailbox.smtp_account
     server = account.server
     email = account.username
@@ -33,26 +35,39 @@ def reply(in_reply_to: Mail, text):
     smtp_host = server.host
     smtp_port = server.port
 
-    template = get_template('mails/reply.html')
+    template = get_template('zenmailbox/reply.html')
     template_context = dict(text=text, in_reply_to=in_reply_to)
     plain_text = template.render(template_context)
     html = template.render(dict(**template_context, html=True))
 
-    to = [in_reply_to._from.email]
-    cc = [email.cc for email in in_reply_to.cc.all()]
-    bcc = [email.bcc for email in in_reply_to.bcc.all()]
-    in_reply_to_email = in_reply_to._from.email
-    subject = ("Re: " if in_reply_to.subject else "") + in_reply_to.subject
-    from_name = account.from_name
-    from_email = account.from_email
-
-    msg = MIMEMultipart('mixed')
-    msg["Message-Id"] = "%s-%s-%s-%s" % (
+    instance._from = EMailEntity.objects.get_or_create(email=account.from_email, name=account.from_name)[0]
+    instance.message_id = "%s-%s-%s-%s" % (
         "".join(choices(ALPHA, k=8)),
         "".join(choices(ALPHA, k=8)),
         "".join(choices(ALPHA, k=8)),
         "".join(choices(ALPHA, k=8))
     )
+    instance.in_reply_to = in_reply_to
+    instance.plain_text = plain_text
+    instance.html = html
+    instance.received_at = now()
+    instance.folder = in_reply_to.folder.mailbox.folders.filter(sent=True).first()
+    instance.subject = ("Re: " if in_reply_to.subject else "") + in_reply_to.subject
+    instance.save()
+    instance.to.set([in_reply_to._from])
+    instance.cc.set(in_reply_to.cc.all())
+    instance.bcc.set(in_reply_to.bcc.all())
+
+    to = [in_reply_to._from.email]
+    cc = [email.cc for email in in_reply_to.cc.all()]
+    bcc = [email.bcc for email in in_reply_to.bcc.all()]
+    in_reply_to_email = in_reply_to._from.email
+    subject = ("" if in_reply_to.subject.startswith('Re:') else "Re:") + in_reply_to.subject
+    from_name = account.from_name
+    from_email = account.from_email
+
+    msg = MIMEMultipart('mixed')
+    msg["Message-Id"] = instance.message_id
     msg["Subject"] = Header(subject, 'utf8')
     msg["From"] = format_email(from_email, from_name)
     msg["To"] = format_email_list(to)

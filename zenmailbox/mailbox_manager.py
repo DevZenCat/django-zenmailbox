@@ -50,12 +50,16 @@ def fetch_folder(folder, filters, imap=None):
     criteria = build_criteria(**filters)
     mails = []
     for msg in imap.fetch(criteria):
+        thread_is_created = False
         reply_to_msg = Mail.objects.filter(message_id=msg.in_reply_to).first()
-        thread = None
         if reply_to_msg:
             thread = reply_to_msg.thread
             if not thread:
+                thread_is_created = True
                 thread = reply_to_msg.thread = Thread.objects.create()
+        else:
+            thread_is_created = True
+            thread = Thread.objects.create()
         try:
             mail = Mail.objects.create(
                 in_reply_to=reply_to_msg,
@@ -71,6 +75,8 @@ def fetch_folder(folder, filters, imap=None):
             )
         except IntegrityError as e:
             if str(e).startswith("UNIQUE constraint failed"):
+                if thread_is_created:
+                    thread.delete()
                 continue
         mail.to.set([
             EMailEntity.objects.get_or_create(email=email["email"], name=email["name"])[0]

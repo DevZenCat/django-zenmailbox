@@ -5,3 +5,5 @@ __pycache__/
 
 attachments
 db.sqlite3
+dist
+django_zenmailbox.egg-info
