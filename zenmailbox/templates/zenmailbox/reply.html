@@ -1,1 +1,4 @@
-{% if html %}{{ text }}{% else %}{{ text }}{% endif %}
+{% spaceless %}
+{% load zenhtml %}
+{% if html %}{{ text|safe }}{% else %}{{ text|html_to_plaintext }}{% endif %}
+{% endspaceless %}

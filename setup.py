@@ -7,5 +7,8 @@ def get_requirements():
 
 
 setup(
-    install_requires=get_requirements()
+    install_requires=get_requirements(),
+    extras_require={
+        'ckeditor': ['django-ckeditor == 6.0.0'],
+    },
 )
