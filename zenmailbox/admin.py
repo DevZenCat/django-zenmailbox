@@ -1,5 +1,9 @@
+from django.contrib.admin.utils import unquote
+from django.core.exceptions import PermissionDenied
 from django.forms import BaseInlineFormSet
 from django.contrib.admin import ModelAdmin, register, TabularInline
+from django.http import HttpResponse
+from django.urls import path
 
 from .utils import reply
 from .models import *
@@ -32,7 +36,21 @@ class SMTPServerAdmin(ModelAdmin):
 
 @register(Mail)
 class MailAdmin(ModelAdmin):
-    pass
+    def get_urls(self):
+        urls = super().get_urls()
+        urls.insert(-1, path('<path:object_id>/view/', self.view_mail, name='zenmailbox_mail_view'))
+        return urls
+
+    def view_mail(self, request, object_id, extra_context=None):
+        model = self.model
+        obj = self.get_object(request, unquote(object_id))
+        if obj is None:
+            return self._get_obj_does_not_exist_redirect(request, model._meta, object_id)
+
+        if not self.has_view_or_change_permission(request, obj):
+            raise PermissionDenied
+
+        return HttpResponse(obj.html.encode(), content_type="text/html")
 
 
 @register(Folder)

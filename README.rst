@@ -25,6 +25,8 @@ Quick start
 
 Settings
 --------
+To change reply template place it under ``zenmailbox/reply.html``
+
 Django settings entries::
 
     ZENMAILBOX_ATTACHMENTS_FOLDER = os.path.join(BASE_DIR, 'attachments')
