@@ -25,9 +25,10 @@ def format_email_list(email_list):
 ALPHA = 'abcdef0123456789'
 
 
-def reply(instance: Mail, in_reply_to: Mail):
-    text = instance.plain_text
-    account = in_reply_to.folder.mailbox.smtp_account
+def reply(instance: Mail):
+    thread = instance.thread
+    folder = thread.mails.first().folder
+    account = folder.mailbox.smtp_account
     server = account.server
     email = account.username
     token = account.token
@@ -35,8 +36,10 @@ def reply(instance: Mail, in_reply_to: Mail):
     smtp_host = server.host
     smtp_port = server.port
 
+    in_reply_to = thread.mails.exclude(_from__email=account.from_email).order_by("-received_at").first()
+
     template = get_template('zenmailbox/reply.html')
-    template_context = dict(text=text, in_reply_to=in_reply_to)
+    template_context = dict(text=instance.html, in_reply_to=in_reply_to)
     plain_text = template.render(template_context)
     html = template.render(dict(**template_context, html=True))
 

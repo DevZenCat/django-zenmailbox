@@ -24,6 +24,12 @@ ATTACHMENT_PATH_FORMAT = getattr(
     '{mailbox.id}/{folder.id}/{mail.id}/{attachment.filename}'
 )
 
+SAVE_ATTACHMENTS = getattr(
+    settings,
+    "ZENMAILBOX_SAVE_ATTACHMENTS",
+    True
+)
+
 ATTACHMENT_PATH = os.path.join(ATTACHMENTS_FOLDER, ATTACHMENT_PATH_FORMAT)
 
 
@@ -90,14 +96,15 @@ def fetch_folder(folder, filters, imap=None):
             EMailEntity.objects.get_or_create(email=email["email"], name=email["name"])[0]
             for email in msg.bcc_values
         ])
-        for att in msg.attachments:
-            if att.content_disposition != "attachment":
-                continue
-            attachment = Attachment(mail=mail, filename=att.filename, content_type=att.content_type)
-            attachment.file.save(
-                ATTACHMENT_PATH.format(mailbox=folder.mailbox, folder=folder, mail=mail, attachment=att),
-                ContentFile(att.payload)
-            )
+        if SAVE_ATTACHMENTS:
+            for att in msg.attachments:
+                if att.content_disposition != "attachment":
+                    continue
+                attachment = Attachment(mail=mail, filename=att.filename, content_type=att.content_type)
+                attachment.file.save(
+                    ATTACHMENT_PATH.format(mailbox=folder.mailbox, folder=folder, mail=mail, attachment=att),
+                    ContentFile(att.payload)
+                )
         mails.append(mail)
     return mails
 
@@ -155,6 +162,7 @@ def fetch_mailbox(mailbox, clean=False, criteria=None):
     else:
         imap.login(account.username, account.password)
     if clean:
+        Mail.objects.filter(folder__mailbox=mailbox).delete()
         mailbox.folders.all().delete()
         folders = FolderSet(imap, mailbox).sync(False)
     else:

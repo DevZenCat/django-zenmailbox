@@ -1,16 +1,24 @@
 from django.contrib.admin.utils import unquote
 from django.core.exceptions import PermissionDenied
-from django.forms import BaseInlineFormSet
+from django.forms import BaseInlineFormSet, ModelForm
 from django.contrib.admin import ModelAdmin, register, TabularInline
 from django.http import HttpResponse
 from django.urls import path
 
 from .utils import reply
 from .models import *
+from .widgets import HtmlWidget
+from .mailbox_manager import fetch_mailbox
+
+
+def fetch_mail(modeladmin, request, queryset):
+    for mb in queryset:
+        fetch_mailbox(mb)
 
 
 @register(Mailbox)
 class MailboxAdmin(ModelAdmin):
+    actions = fetch_mail,
     pass
 
 
@@ -34,8 +42,16 @@ class SMTPServerAdmin(ModelAdmin):
     pass
 
 
+class MailForm(ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['html'].widget = HtmlWidget()
+
+
 @register(Mail)
 class MailAdmin(ModelAdmin):
+    form = MailForm
+
     def get_urls(self):
         urls = super().get_urls()
         urls.insert(-1, path('<path:object_id>/view/', self.view_mail, name='zenmailbox_mail_view'))
@@ -64,9 +80,13 @@ class AttachmentAdmin(ModelAdmin):
 
 
 class MessageInlineFormSet(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for form in self.forms:
+            form.fields['html'].widget = HtmlWidget()
+
     def save_new(self, form, commit=True):
-        print(form, form.instance)
-        reply(form.instance, form.instance.thread.mails.order_by("-received_at").first())
+        reply(form.instance)
         return super().save_new(form, commit)
 
 
@@ -77,7 +97,7 @@ class MailInlineAdmin(TabularInline):
     fields = [
         '_from',
         'to',
-        'plain_text',
+        'html',
         'received_at'
     ]
     template = 'zenmailbox/messages_inline.html'
