@@ -6,4 +6,4 @@ register = template.Library()
 
 @register.filter
 def html_to_plaintext(value):
-    return strip_tags(value.replace("<br>", "\n"))
+    return strip_tags(value.replace("<br>", "\n").replace("<br />", "\n"))
