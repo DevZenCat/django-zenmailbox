@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-attachments
+testproject/attachments
 db.sqlite3
 dist
 django_zenmailbox.egg-info

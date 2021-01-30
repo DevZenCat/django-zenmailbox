@@ -55,7 +55,7 @@ def reply(instance: Mail):
     instance.html = html
     instance.received_at = now()
     instance.folder = in_reply_to.folder.mailbox.folders.filter(sent=True).first()
-    instance.subject = ("Re: " if in_reply_to.subject else "") + in_reply_to.subject
+    instance.subject = ("" if in_reply_to.subject.startswith("Re:") else "Re:") + in_reply_to.subject
     instance.save()
     instance.to.set([in_reply_to._from])
     instance.cc.set(in_reply_to.cc.all())
@@ -65,7 +65,7 @@ def reply(instance: Mail):
     cc = [email.cc for email in in_reply_to.cc.all()]
     bcc = [email.bcc for email in in_reply_to.bcc.all()]
     in_reply_to_email = in_reply_to._from.email
-    subject = ("" if in_reply_to.subject.startswith('Re:') else "Re:") + in_reply_to.subject
+    subject = instance.subject
     from_name = account.from_name
     from_email = account.from_email
 
