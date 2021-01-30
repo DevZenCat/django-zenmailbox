@@ -1,0 +1,39 @@
+name: Test
+
+on:
+  pull_request:
+    branches:
+      - development
+  push:
+    branches:
+      - '**'
+
+jobs:
+  pytest:
+    runs-on: ${{matrix.os}}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.7]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py
+          pip install -r requirements.txt
+          pip install -r requirements.test.txt
+        shell: bash
+      - name: Testing
+        env:
+          MB_USERNAME_SENDER: ${{ secrets.MB_USERNAME_SENDER }}
+          MB_PASSWORD_SENDER: ${{ secrets.MB_PASSWORD_SENDER }}
+          MB_USERNAME_RECEIVER: ${{ secrets.MB_USERNAME_RECEIVER }}
+          MB_PASSWORD_RECEIVER: ${{ secrets.MB_PASSWORD_RECEIVER }}
+        run: |
+          python run_tests.py
+        shell: bash
